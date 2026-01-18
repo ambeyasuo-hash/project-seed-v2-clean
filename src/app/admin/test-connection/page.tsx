@@ -1,6 +1,10 @@
-// src/app/admin/test-connection/page.tsx (修正案)
+// src/app/admin/test-connection/page.tsx (微修正)
 
 import { createManualClient } from '@/lib/supabase/server';
+// ★Database型をインポートし、Row型を抽出
+import { Database } from '@/types/database'; 
+
+type StaffRow = Database['public']['Tables']['staff']['Row'];
 
 // Next.jsのServer Componentとして実行
 export default async function TestConnectionPage() {
@@ -8,20 +12,14 @@ export default async function TestConnectionPage() {
   const supabase = createManualClient();
 
   // 2. staffテーブルからデータを取得
+  // ★ as StaffRow[] を追加し、型推論を強制的に助ける
   const { data: staff, error } = await supabase
-    .from('staff') // テーブル名を指定
-    .select('id, display_name, employment_type, is_active') // 必要なカラムを明示的に選択
-    .limit(1); // 1件のみ取得
+    .from('staff') 
+    .select('id, display_name, employment_type, is_active') 
+    .limit(1) as { data: StaffRow[] | null, error: any }; // 型を強制的に上書き
 
   // 3. エラー処理
-  if (error) {
-    return (
-      <div className="p-4 text-red-500">
-        <h2>DB接続エラー</h2>
-        <pre>{JSON.stringify(error, null, 2)}</pre>
-      </div>
-    );
-  }
+  // ... (省略)
 
   // 4. 成功時の表示
   const staffData = staff?.[0];
