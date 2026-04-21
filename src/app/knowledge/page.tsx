@@ -1,23 +1,31 @@
 "use client";
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { Database } from '@/types/database';
+
+type KnowledgeEntry = Pick<Database['public']['Tables']['knowledge_entries']['Row'], 'id' | 'title' | 'description' | 'status'>;
 
 export default function KnowledgePage() {
-  const [entries, setEntries] = useState<any[]>([]);
+  const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
   const [summary, setSummary] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/knowledge').then(res => res.json()).then(data => setEntries(data.entries || []));
+    (async () => {
+      const res = await fetch('/api/knowledge');
+      const data = await res.json();
+      setEntries(data.entries ?? []);
+    })();
   }, []);
 
   const handleSummarize = async (id: string) => {
     setSummary("AIが要約中...");
     const res = await fetch('/api/knowledge/summarize', {
       method: 'POST',
-      body: JSON.stringify({ entryId: id })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entryId: id }),
     });
     const data = await res.json();
-    setSummary(data.summary);
+    setSummary(data.summary ?? null);
   };
 
   return (
@@ -28,17 +36,18 @@ export default function KnowledgePage() {
       </div>
 
       {summary && (
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 animate-pulse">
-          <strong>💡 AI要約:</strong> <p>{summary}</p>
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+          <strong>AI要約:</strong>
+          <p>{summary}</p>
         </div>
       )}
 
       <div className="space-y-4">
-        {entries.map(entry => (
+        {entries.map((entry) => (
           <div key={entry.id} className="p-4 bg-white border rounded-xl shadow-sm">
             <h2 className="font-bold text-lg">{entry.title}</h2>
             <p className="text-sm text-gray-600 line-clamp-2 mb-3">{entry.description}</p>
-            <button 
+            <button
               onClick={() => handleSummarize(entry.id)}
               className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full font-medium"
             >

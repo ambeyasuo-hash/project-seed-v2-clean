@@ -1,37 +1,39 @@
 import { NextResponse } from 'next/server';
 import { createManualClient } from '@/lib/supabase/server';
 
-// マニュアル一覧の取得
 export async function GET() {
   const supabase = createManualClient();
-  const { data, error } = await (supabase.from('knowledge_entries') as any)
-    .select(`
-      id,
-      title,
-      description,
-      status,
-      knowledge_categories (name)
-    `)
+  const { data, error } = await supabase
+    .from('knowledge_entries')
+    .select('id, title, description, status')
     .eq('status', 'published');
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ entries: data });
 }
 
-// マニュアルの新規投稿
 export async function POST(request: Request) {
-  const { title, description, categoryId, contributorId, isAnonymous } = await request.json();
-  const supabase = createManualClient();
+  try {
+    const { title, description, categoryId, contributorId, isAnonymous } = await request.json();
+    const supabase = createManualClient();
 
-  const { data, error } = await (supabase.from('knowledge_entries') as any).insert({
-    title,
-    description,
-    category_id: categoryId,
-    contributor_id: contributorId,
-    is_anonymous: isAnonymous,
-    status: 'published'
-  }).select().single();
+    const { data, error } = await supabase
+      .from('knowledge_entries')
+      .insert({
+        title,
+        description,
+        category_id: categoryId,
+        contributor_id: contributorId,
+        is_anonymous: isAnonymous,
+        status: 'published',
+      })
+      .select()
+      .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ entry: data });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ entry: data });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
